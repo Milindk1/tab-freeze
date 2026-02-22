@@ -34,59 +34,12 @@ Tab Lock is a free Chrome extension that locks your browser to a single tab. The
 2. Click the green **Code** button (near the top right)
 3. Click **Download ZIP**
 
-   ![Download ZIP](https://i.imgur.com/placeholder-download.png)
-
 4. Find the downloaded ZIP file on your computer (usually in your **Downloads** folder)
-5. **Double-click** the ZIP file to unzip it — this creates a folder called something like `extension-main`
+5. **Double-click** the ZIP file to unzip it — this creates a folder called something like `tab-freeze-main`
 
 ---
 
-### Step 2 — Set up the icons (one-time, takes 2 minutes)
-
-The extension needs icon image files that are created automatically by a small script. You only need to do this once.
-
-**On Mac:**
-
-1. Open the **Terminal** app
-   - Press **Cmd + Space**, type `Terminal`, press Enter
-2. Type the following commands one at a time, pressing Enter after each:
-
-   ```
-   cd ~/Downloads/extension-main
-   ```
-   ```
-   npm install sharp
-   ```
-   ```
-   node generate-icons.js
-   ```
-
-   You should see a message like:
-   ```
-   Done — 8 PNG icons written to icons/
-   ```
-
-**On Windows:**
-
-1. Open the **Command Prompt**
-   - Press **Windows key**, type `cmd`, press Enter
-2. Type the following commands one at a time, pressing Enter after each:
-
-   ```
-   cd %USERPROFILE%\Downloads\extension-main
-   ```
-   ```
-   npm install sharp
-   ```
-   ```
-   node generate-icons.js
-   ```
-
-> **Don't have Node.js?** If you see an error saying `npm` or `node` is not recognized, you need to install Node.js first. Download it for free from [nodejs.org](https://nodejs.org) — click the big green button and run the installer. Then repeat the steps above.
-
----
-
-### Step 3 — Load the extension in Chrome
+### Step 2 — Load the extension in Chrome
 
 1. Open **Google Chrome**
 2. In the address bar at the top, type:
@@ -101,13 +54,13 @@ The extension needs icon image files that are created automatically by a small s
 
 4. A row of buttons will appear. Click **Load unpacked**
 
-5. A file browser will open. Navigate to the folder you unzipped in Step 1 (e.g. `extension-main` inside your Downloads folder). **Select the folder itself** (not any file inside it) and click **Open** / **Select Folder**
+5. A file browser will open. Navigate to the folder you unzipped in Step 1 (e.g. `tab-freeze-main` inside your Downloads folder). **Select the folder itself** (not any file inside it) and click **Open** / **Select Folder**
 
 6. Tab Lock will appear in your list of extensions with a green checkmark ✓
 
 ---
 
-### Step 4 — Pin it to your toolbar (recommended)
+### Step 3 — Pin it to your toolbar (recommended)
 
 By default Chrome may hide extension icons. To always see Tab Lock:
 
@@ -167,7 +120,7 @@ No. The extension has no network access and does not collect or transmit any dat
 | `activeTab` | To read which tab you're on when you click the extension icon |
 
 **The extension isn't visible in my toolbar — where is it?**
-Click the 🧩 puzzle piece icon next to the address bar and pin Tab Lock (see Step 4 above).
+Click the 🧩 puzzle piece icon next to the address bar and pin Tab Lock (see Step 3 above).
 
 **I see a brief flash of another tab before snapping back — is that normal?**
 Yes. Chrome does not allow extensions to completely block tab switching at the OS level, so there is a very brief moment before snap-back occurs. This is the same behavior all focus-lock browser extensions use.
@@ -190,7 +143,7 @@ For developers who want to know how it works:
 - **Service worker** (`background.js`) listens to `chrome.tabs.onActivated`, `chrome.tabs.onCreated`, and `chrome.tabs.onRemoved`
 - Lock state is stored in `chrome.storage.session` so it survives service worker restarts but clears when the browser closes
 - `chrome.tabs.update()` and `chrome.windows.update()` are used to snap focus back
-- No external dependencies at runtime; `sharp` is only used during the one-time icon generation step
+- No external dependencies — icons are pre-built and included in the repo
 
 ---
 
