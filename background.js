@@ -19,28 +19,32 @@ async function setLockState(partial) {
 
 async function syncBadgeToState(locked) {
   if (locked) {
-    await chrome.action.setBadgeText({ text: "ON" });
-    await chrome.action.setBadgeBackgroundColor({ color: "#E53E3E" });
-    await chrome.action.setTitle({ title: "Tab Lock: ACTIVE — click to unlock" });
-    await chrome.action.setIcon({
-      path: {
-        "16": "icons/locked-16.png",
-        "32": "icons/locked-32.png",
-        "48": "icons/locked-48.png",
-        "128": "icons/locked-128.png"
-      }
-    });
+    await Promise.all([
+      chrome.action.setBadgeText({ text: "ON" }),
+      chrome.action.setBadgeBackgroundColor({ color: "#E53E3E" }),
+      chrome.action.setTitle({ title: "Tab Lock: ACTIVE — click to unlock" }),
+      chrome.action.setIcon({
+        path: {
+          "16": "icons/locked-16.png",
+          "32": "icons/locked-32.png",
+          "48": "icons/locked-48.png",
+          "128": "icons/locked-128.png"
+        }
+      })
+    ]);
   } else {
-    await chrome.action.setBadgeText({ text: "" });
-    await chrome.action.setTitle({ title: "Tab Lock — click to lock this tab" });
-    await chrome.action.setIcon({
-      path: {
-        "16": "icons/unlocked-16.png",
-        "32": "icons/unlocked-32.png",
-        "48": "icons/unlocked-48.png",
-        "128": "icons/unlocked-128.png"
-      }
-    });
+    await Promise.all([
+      chrome.action.setBadgeText({ text: "" }),
+      chrome.action.setTitle({ title: "Tab Lock — click to lock this tab" }),
+      chrome.action.setIcon({
+        path: {
+          "16": "icons/unlocked-16.png",
+          "32": "icons/unlocked-32.png",
+          "48": "icons/unlocked-48.png",
+          "128": "icons/unlocked-128.png"
+        }
+      })
+    ]);
   }
 }
 
@@ -91,7 +95,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   if (!state.locked) return;
   if (tabId !== state.lockedTabId) return;
 
-  console.log("Tab Lock: locked tab closed — unlocking.");
   await performUnlock();
 });
 
