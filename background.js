@@ -51,10 +51,13 @@ async function syncBadgeToState(locked) {
 async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
   try {
     await chrome.windows.update(lockedWindowId, { focused: true });
+  } catch (_) {
+    // Window may already be focused or gone — continue anyway
+  }
+  try {
     await chrome.tabs.update(lockedTabId, { active: true });
-  } catch (err) {
-    // Locked tab or window no longer exists — unlock cleanly
-    console.warn("Tab Lock: snap-back failed, unlocking.", err);
+  } catch (_) {
+    // Tab no longer exists — unlock cleanly
     await performUnlock();
   }
 }
