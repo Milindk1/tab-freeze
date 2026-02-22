@@ -1,7 +1,6 @@
 // background.js — Tab Lock Service Worker
-// All listeners are registered at the top level so they re-register
-// on every service worker wake-up. State is always read from
-// chrome.storage.session (never from module-level variables).
+
+console.log("[TabLock] service worker started");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,56 +47,69 @@ async function syncBadgeToState(locked) {
   }
 }
 
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
   try {
     await chrome.windows.update(lockedWindowId, { focused: true });
-  } catch (_) {
-    // Window may already be focused or gone — continue anyway
+  } catch (err) {
+    console.warn("[TabLock] windows.update failed:", err.message);
   }
-  try {
-    await chrome.tabs.update(lockedTabId, { active: true });
-  } catch (_) {
-    // Tab no longer exists — unlock cleanly
-    await performUnlock();
+
+  // Chrome rejects tabs.update mid-transition ("Tabs cannot be edited right now").
+  // Retry up to 5 times with a short delay before giving up.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await chrome.tabs.update(lockedTabId, { active: true });
+      console.log("[TabLock] snapped back to tab", lockedTabId, "(attempt", attempt + ")");
+      return;
+    } catch (err) {
+      if (attempt < 5 && err.message.includes("cannot be edited")) {
+        console.log("[TabLock] tab busy, retrying in 50ms (attempt", attempt + ")");
+        await delay(50);
+        continue;
+      }
+      // Tab genuinely gone — unlock cleanly
+      console.warn("[TabLock] tabs.update failed — unlocking:", err.message);
+      await performUnlock();
+      return;
+    }
   }
 }
 
 async function performUnlock() {
   await setLockState({ locked: false, lockedTabId: null, lockedWindowId: null });
   await syncBadgeToState(false);
+  console.log("[TabLock] unlocked");
 }
 
 // ─── Event Listeners ──────────────────────────────────────────────────────────
 
-// Primary snap-back: fires whenever the active tab in any window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const state = await getLockState();
+  console.log("[TabLock] onActivated — tabId:", activeInfo.tabId, "| state:", JSON.stringify(state));
   if (!state.locked) return;
   if (activeInfo.tabId === state.lockedTabId) return;
-
   await snapBackToLockedTab(state.lockedTabId, state.lockedWindowId);
 });
 
-// New tab opened while locked: close it and snap back.
 chrome.tabs.onCreated.addListener(async (tab) => {
   const state = await getLockState();
+  console.log("[TabLock] onCreated — tabId:", tab.id, "| locked:", state.locked);
   if (!state.locked) return;
-
   try {
     await chrome.tabs.remove(tab.id);
   } catch (err) {
-    console.warn("Tab Lock: could not close new tab.", err);
+    console.warn("[TabLock] could not close new tab:", err.message);
   }
-
   await snapBackToLockedTab(state.lockedTabId, state.lockedWindowId);
 });
 
-// Locked tab was closed: auto-unlock.
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = await getLockState();
   if (!state.locked) return;
   if (tabId !== state.lockedTabId) return;
-
+  console.log("[TabLock] locked tab closed — unlocking");
   await performUnlock();
 });
 
@@ -107,20 +119,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   handleMessage(message)
     .then(sendResponse)
     .catch((err) => {
-      console.error("Tab Lock: message error", err);
+      console.error("[TabLock] message error:", err);
       sendResponse({ error: err.message });
     });
-  return true; // Keep channel open for async response
+  return true;
 });
 
 async function handleMessage(message) {
+  console.log("[TabLock] message received:", JSON.stringify(message));
   switch (message.action) {
-    case "getState":
-      return getLockState();
+    case "getState": {
+      const state = await getLockState();
+      console.log("[TabLock] getState →", JSON.stringify(state));
+      return state;
+    }
 
     case "lock": {
       const { tabId, windowId } = message;
       await setLockState({ locked: true, lockedTabId: tabId, lockedWindowId: windowId });
+      const verify = await getLockState();
+      console.log("[TabLock] locked. verified state:", JSON.stringify(verify));
       await syncBadgeToState(true);
       return { success: true };
     }
