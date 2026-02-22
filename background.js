@@ -1,7 +1,5 @@
 // background.js — Tab Lock Service Worker
 
-console.log("[TabLock] service worker started");
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getLockState() {
@@ -52,8 +50,8 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
   try {
     await chrome.windows.update(lockedWindowId, { focused: true });
-  } catch (err) {
-    console.warn("[TabLock] windows.update failed:", err.message);
+  } catch (_) {
+    // Window may already be focused or gone — continue anyway
   }
 
   // Chrome rejects tabs.update mid-transition ("Tabs cannot be edited right now").
@@ -61,16 +59,13 @@ async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
       await chrome.tabs.update(lockedTabId, { active: true });
-      console.log("[TabLock] snapped back to tab", lockedTabId, "(attempt", attempt + ")");
       return;
     } catch (err) {
       if (attempt < 5 && err.message.includes("cannot be edited")) {
-        console.log("[TabLock] tab busy, retrying in 50ms (attempt", attempt + ")");
         await delay(50);
         continue;
       }
       // Tab genuinely gone — unlock cleanly
-      console.warn("[TabLock] tabs.update failed — unlocking:", err.message);
       await performUnlock();
       return;
     }
@@ -80,14 +75,12 @@ async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
 async function performUnlock() {
   await setLockState({ locked: false, lockedTabId: null, lockedWindowId: null });
   await syncBadgeToState(false);
-  console.log("[TabLock] unlocked");
 }
 
 // ─── Event Listeners ──────────────────────────────────────────────────────────
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   const state = await getLockState();
-  console.log("[TabLock] onActivated — tabId:", activeInfo.tabId, "| state:", JSON.stringify(state));
   if (!state.locked) return;
   if (activeInfo.tabId === state.lockedTabId) return;
   await snapBackToLockedTab(state.lockedTabId, state.lockedWindowId);
@@ -95,13 +88,10 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 chrome.tabs.onCreated.addListener(async (tab) => {
   const state = await getLockState();
-  console.log("[TabLock] onCreated — tabId:", tab.id, "| locked:", state.locked);
   if (!state.locked) return;
   try {
     await chrome.tabs.remove(tab.id);
-  } catch (err) {
-    console.warn("[TabLock] could not close new tab:", err.message);
-  }
+  } catch (_) {}
   await snapBackToLockedTab(state.lockedTabId, state.lockedWindowId);
 });
 
@@ -109,7 +99,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   const state = await getLockState();
   if (!state.locked) return;
   if (tabId !== state.lockedTabId) return;
-  console.log("[TabLock] locked tab closed — unlocking");
   await performUnlock();
 });
 
@@ -118,27 +107,18 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   handleMessage(message)
     .then(sendResponse)
-    .catch((err) => {
-      console.error("[TabLock] message error:", err);
-      sendResponse({ error: err.message });
-    });
+    .catch((err) => sendResponse({ error: err.message }));
   return true;
 });
 
 async function handleMessage(message) {
-  console.log("[TabLock] message received:", JSON.stringify(message));
   switch (message.action) {
-    case "getState": {
-      const state = await getLockState();
-      console.log("[TabLock] getState →", JSON.stringify(state));
-      return state;
-    }
+    case "getState":
+      return getLockState();
 
     case "lock": {
       const { tabId, windowId } = message;
       await setLockState({ locked: true, lockedTabId: tabId, lockedWindowId: windowId });
-      const verify = await getLockState();
-      console.log("[TabLock] locked. verified state:", JSON.stringify(verify));
       await syncBadgeToState(true);
       return { success: true };
     }

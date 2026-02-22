@@ -16,14 +16,6 @@ Tab Lock is a free Chrome extension that locks your browser to a single tab. The
 
 ---
 
-## Screenshots
-
-| Unlocked | Locked |
-|---|---|
-| Green padlock, ready to lock | Red padlock + red "ON" badge, fully active |
-
----
-
 ## Installation (from GitHub)
 
 > You do not need to know how to code. Just follow these steps exactly.
@@ -31,32 +23,21 @@ Tab Lock is a free Chrome extension that locks your browser to a single tab. The
 ### Step 1 — Download the extension
 
 1. Go to the GitHub repository page for this extension
-2. Click the green **Code** button (near the top right)
+2. Click the green **Code** button near the top right
 3. Click **Download ZIP**
-
 4. Find the downloaded ZIP file on your computer (usually in your **Downloads** folder)
-5. **Double-click** the ZIP file to unzip it — this creates a folder called something like `tab-freeze-main`
+5. **Double-click** the ZIP file to unzip it — this creates a folder called `tab-freeze-main`
 
 ---
 
 ### Step 2 — Load the extension in Chrome
 
 1. Open **Google Chrome**
-2. In the address bar at the top, type:
-   ```
-   chrome://extensions
-   ```
-   and press **Enter**
-
+2. In the address bar, type `chrome://extensions` and press **Enter**
 3. In the top-right corner of that page, turn on **Developer mode**
-
-   ![Developer mode toggle](https://i.imgur.com/placeholder-devmode.png)
-
-4. A row of buttons will appear. Click **Load unpacked**
-
-5. A file browser will open. Navigate to the folder you unzipped in Step 1 (e.g. `tab-freeze-main` inside your Downloads folder). **Select the folder itself** (not any file inside it) and click **Open** / **Select Folder**
-
-6. Tab Lock will appear in your list of extensions with a green checkmark ✓
+4. A row of buttons will appear — click **Load unpacked**
+5. A file picker will open. Find and select the `tab-freeze-main` folder you unzipped in Step 1. Click **Select Folder** (Windows) or **Open** (Mac)
+6. Tab Lock will appear in your list of extensions ✓
 
 ---
 
@@ -118,6 +99,7 @@ No. The extension has no network access and does not collect or transmit any dat
 | `tabs` | To know which tab is active and switch back to the locked one |
 | `storage` | To remember which tab is locked even if Chrome idles |
 | `activeTab` | To read which tab you're on when you click the extension icon |
+| `windows` | To bring the locked tab's window back into focus |
 
 **The extension isn't visible in my toolbar — where is it?**
 Click the 🧩 puzzle piece icon next to the address bar and pin Tab Lock (see Step 3 above).
@@ -143,6 +125,7 @@ For developers who want to know how it works:
 - **Service worker** (`background.js`) listens to `chrome.tabs.onActivated`, `chrome.tabs.onCreated`, and `chrome.tabs.onRemoved`
 - Lock state is stored in `chrome.storage.session` so it survives service worker restarts but clears when the browser closes
 - `chrome.tabs.update()` and `chrome.windows.update()` are used to snap focus back
+- Snap-back retries up to 5 times to handle Chrome's mid-transition tab lock
 - No external dependencies — icons are pre-built and included in the repo
 
 ---
