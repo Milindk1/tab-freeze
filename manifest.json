@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Lock",
+  "version": "1.0.0",
+  "description": "Lock focus to a single browser tab. Snap back automatically if you switch away.",
+
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/unlocked-16.png",
+      "32": "icons/unlocked-32.png",
+      "48": "icons/unlocked-48.png",
+      "128": "icons/unlocked-128.png"
+    },
+    "default_title": "Tab Lock"
+  },
+
+  "icons": {
+    "16": "icons/unlocked-16.png",
+    "32": "icons/unlocked-32.png",
+    "48": "icons/unlocked-48.png",
+    "128": "icons/unlocked-128.png"
+  }
+}
