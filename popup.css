@@ -7,6 +7,7 @@
 :root {
   --bg: #1A202C;
   --surface: #2D3748;
+  --surface-2: #3A4A5C;
   --border: #4A5568;
   --text: #F7FAFC;
   --muted: #A0AEC0;
@@ -15,6 +16,7 @@
   --green: #48BB78;
   --blue: #3182CE;
   --blue-dark: #2B6CB0;
+  --yellow: #D69E2E;
   --radius: 8px;
   --ease: 180ms ease;
 }
@@ -35,7 +37,8 @@ body {
   padding: 24px 20px 20px;
 }
 
-/* Icon ring */
+/* ── Icon ring ─────────────────────────────────────────────────────────────── */
+
 .icon-wrapper {
   display: flex;
   align-items: center;
@@ -48,10 +51,11 @@ body {
   transition: border-color var(--ease);
 }
 
-.icon-wrapper.locked  { border-color: var(--red); }
+.icon-wrapper.locked   { border-color: var(--red); }
 .icon-wrapper.unlocked { border-color: var(--green); }
 
-/* Status */
+/* ── Status ────────────────────────────────────────────────────────────────── */
+
 .status-text {
   font-size: 16px;
   font-weight: 600;
@@ -62,7 +66,106 @@ body {
 .status-text.locked   { color: var(--red); }
 .status-text.unlocked { color: var(--green); }
 
-/* Tab info */
+/* ── Timer selector (shown when unlocked) ──────────────────────────────────── */
+
+.timer-select-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+.timer-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.timer-select {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A0AEC0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.timer-select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.custom-input-group {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.custom-input::placeholder { color: var(--muted); }
+
+.custom-input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* Remove number input arrows */
+.custom-input::-webkit-outer-spin-button,
+.custom-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.custom-input[type=number] { -moz-appearance: textfield; }
+
+/* ── Countdown (shown when locked with timer) ──────────────────────────────── */
+
+.countdown-group {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 0 6px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.countdown-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.countdown-display {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--yellow);
+  letter-spacing: 0.04em;
+  font-family: "SF Mono", "Fira Code", ui-monospace, monospace;
+  transition: color var(--ease);
+}
+
+.countdown-group.done .countdown-display { color: var(--green); }
+
+/* ── Tab info ──────────────────────────────────────────────────────────────── */
+
 .tab-info {
   font-size: 11px;
   color: var(--muted);
@@ -70,7 +173,8 @@ body {
   min-height: 14px;
 }
 
-/* Button */
+/* ── Button ────────────────────────────────────────────────────────────────── */
+
 .btn {
   width: 100%;
   padding: 10px 16px;
@@ -102,7 +206,8 @@ body {
   background: var(--red-dark);
 }
 
-/* Footer */
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+
 .footer-note {
   font-size: 11px;
   color: var(--muted);

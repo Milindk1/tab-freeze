@@ -10,6 +10,38 @@
   <div class="container">
     <div class="icon-wrapper" id="icon-wrapper"></div>
     <p class="status-text" id="status-text">Loading...</p>
+
+    <!-- Timer selector — shown when unlocked -->
+    <div class="timer-select-group" id="timer-select-group">
+      <label class="timer-label" for="duration-select">Lock for at least</label>
+      <select class="timer-select" id="duration-select">
+        <option value="0">No timer</option>
+        <option value="5">5 minutes</option>
+        <option value="10">10 minutes</option>
+        <option value="15">15 minutes</option>
+        <option value="30">30 minutes</option>
+        <option value="60">1 hour</option>
+        <option value="120">2 hours</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <div class="custom-input-group" id="custom-input-group">
+        <input
+          type="number"
+          id="custom-minutes"
+          class="custom-input"
+          min="1"
+          max="1440"
+          placeholder="minutes"
+        />
+      </div>
+    </div>
+
+    <!-- Countdown — shown when locked with an active timer -->
+    <div class="countdown-group" id="countdown-group">
+      <p class="countdown-label">Unlocks in</p>
+      <p class="countdown-display" id="countdown-display">--:--</p>
+    </div>
+
     <p class="tab-info" id="tab-info"></p>
     <button class="btn" id="toggle-btn" disabled>Loading...</button>
     <p class="footer-note" id="footer-note"></p>

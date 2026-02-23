@@ -6,7 +6,8 @@ async function getLockState() {
   return chrome.storage.session.get({
     locked: false,
     lockedTabId: null,
-    lockedWindowId: null
+    lockedWindowId: null,
+    unlockAt: null  // timestamp (ms) after which manual unlock is allowed; null = no timer
   });
 }
 
@@ -73,7 +74,7 @@ async function snapBackToLockedTab(lockedTabId, lockedWindowId) {
 }
 
 async function performUnlock() {
-  await setLockState({ locked: false, lockedTabId: null, lockedWindowId: null });
+  await setLockState({ locked: false, lockedTabId: null, lockedWindowId: null, unlockAt: null });
   await syncBadgeToState(false);
 }
 
@@ -117,15 +118,21 @@ async function handleMessage(message) {
       return getLockState();
 
     case "lock": {
-      const { tabId, windowId } = message;
-      await setLockState({ locked: true, lockedTabId: tabId, lockedWindowId: windowId });
+      const { tabId, windowId, unlockAt } = message;
+      await setLockState({ locked: true, lockedTabId: tabId, lockedWindowId: windowId, unlockAt: unlockAt ?? null });
       await syncBadgeToState(true);
       return { success: true };
     }
 
-    case "unlock":
+    case "unlock": {
+      const state = await getLockState();
+      // Reject if timer is still running
+      if (state.unlockAt && Date.now() < state.unlockAt) {
+        return { blocked: true, unlockAt: state.unlockAt };
+      }
       await performUnlock();
       return { success: true };
+    }
 
     default:
       return { error: "Unknown action: " + message.action };

@@ -18,44 +18,106 @@ const UNLOCKED_SVG = `
 
 // ─── DOM ──────────────────────────────────────────────────────────────────────
 
-const iconWrapper = document.getElementById("icon-wrapper");
-const statusText  = document.getElementById("status-text");
-const tabInfo     = document.getElementById("tab-info");
-const toggleBtn   = document.getElementById("toggle-btn");
-const footerNote  = document.getElementById("footer-note");
+const iconWrapper       = document.getElementById("icon-wrapper");
+const statusText        = document.getElementById("status-text");
+const tabInfo           = document.getElementById("tab-info");
+const toggleBtn         = document.getElementById("toggle-btn");
+const footerNote        = document.getElementById("footer-note");
+const timerSelectGroup  = document.getElementById("timer-select-group");
+const durationSelect    = document.getElementById("duration-select");
+const customInputGroup  = document.getElementById("custom-input-group");
+const customMinutes     = document.getElementById("custom-minutes");
+const countdownGroup    = document.getElementById("countdown-group");
+const countdownDisplay  = document.getElementById("countdown-display");
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let currentState    = null;
 let currentTabId    = null;
 let currentWindowId = null;
+let countdownTimer  = null;
+
+// ─── Timer Formatting ─────────────────────────────────────────────────────────
+
+function formatRemaining(ms) {
+  if (ms <= 0) return "0:00";
+  const totalSec = Math.ceil(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function startCountdown(unlockAt) {
+  if (countdownTimer) clearInterval(countdownTimer);
+
+  function tick() {
+    const remaining = unlockAt - Date.now();
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      countdownDisplay.textContent = "0:00";
+      // Timer expired — enable the unlock button
+      toggleBtn.disabled = false;
+      toggleBtn.textContent = "Unlock Tab";
+      footerNote.textContent = "Timer done. You can now unlock.";
+      countdownGroup.classList.add("done");
+      return;
+    }
+    countdownDisplay.textContent = formatRemaining(remaining);
+  }
+
+  tick();
+  countdownTimer = setInterval(tick, 500);
+}
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 
 function renderUI(state) {
   currentState = state;
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
 
   if (state.locked) {
     iconWrapper.innerHTML = LOCKED_SVG;
-    iconWrapper.classList.add("locked");
-    iconWrapper.classList.remove("unlocked");
+    iconWrapper.className = "icon-wrapper locked";
     statusText.textContent = "Tab is locked";
     statusText.className = "status-text locked";
     tabInfo.textContent = `Locked to tab #${state.lockedTabId}`;
-    toggleBtn.textContent = "Unlock Tab";
     toggleBtn.className = "btn btn-unlock";
-    toggleBtn.disabled = false;
-    footerNote.textContent = "Switching to another tab will snap you right back.";
+
+    // Hide duration selector, show countdown if timer is active
+    timerSelectGroup.style.display = "none";
+
+    const timerActive = state.unlockAt && Date.now() < state.unlockAt;
+    if (timerActive) {
+      countdownGroup.style.display = "flex";
+      countdownGroup.classList.remove("done");
+      toggleBtn.disabled = true;
+      toggleBtn.textContent = "Unlock Tab";
+      footerNote.textContent = "Hang tight — timer is running.";
+      startCountdown(state.unlockAt);
+    } else {
+      countdownGroup.style.display = "none";
+      toggleBtn.disabled = false;
+      toggleBtn.textContent = "Unlock Tab";
+      footerNote.textContent = "Switching to another tab will snap you right back.";
+    }
   } else {
     iconWrapper.innerHTML = UNLOCKED_SVG;
-    iconWrapper.classList.add("unlocked");
-    iconWrapper.classList.remove("locked");
+    iconWrapper.className = "icon-wrapper unlocked";
     statusText.textContent = "No tab locked";
     statusText.className = "status-text unlocked";
     tabInfo.textContent = "";
     toggleBtn.textContent = "Lock This Tab";
     toggleBtn.className = "btn btn-lock";
     toggleBtn.disabled = false;
+    timerSelectGroup.style.display = "flex";
+    countdownGroup.style.display = "none";
     footerNote.textContent = "Lock focus to the current tab while you work.";
   }
 }
@@ -63,6 +125,18 @@ function renderUI(state) {
 function setLoading(loading) {
   toggleBtn.disabled = loading;
   if (loading) toggleBtn.textContent = "Working...";
+}
+
+// ─── Duration helpers ─────────────────────────────────────────────────────────
+
+function getSelectedMinutes() {
+  const val = durationSelect.value;
+  if (val === "0") return 0;
+  if (val === "custom") {
+    const mins = parseInt(customMinutes.value, 10);
+    return isNaN(mins) || mins < 1 ? 0 : mins;
+  }
+  return parseInt(val, 10);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -76,28 +150,48 @@ async function init() {
   renderUI(state);
 }
 
+// ─── Dropdown — show/hide custom input ────────────────────────────────────────
+
+durationSelect.addEventListener("change", () => {
+  customInputGroup.style.display = durationSelect.value === "custom" ? "flex" : "none";
+});
+
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
 toggleBtn.addEventListener("click", async () => {
   setLoading(true);
   try {
     if (currentState?.locked) {
-      await chrome.runtime.sendMessage({ action: "unlock" });
-      renderUI({ locked: false, lockedTabId: null, lockedWindowId: null });
+      const res = await chrome.runtime.sendMessage({ action: "unlock" });
+      if (res.blocked) {
+        // Shouldn't reach here normally (button is disabled while timer runs),
+        // but guard just in case.
+        toggleBtn.disabled = true;
+        toggleBtn.textContent = "Unlock Tab";
+        setLoading(false);
+        return;
+      }
+      renderUI({ locked: false, lockedTabId: null, lockedWindowId: null, unlockAt: null });
     } else {
+      const minutes  = getSelectedMinutes();
+      const unlockAt = minutes > 0 ? Date.now() + minutes * 60 * 1000 : null;
       await chrome.runtime.sendMessage({
         action: "lock",
         tabId: currentTabId,
-        windowId: currentWindowId
+        windowId: currentWindowId,
+        unlockAt
       });
-      renderUI({ locked: true, lockedTabId: currentTabId, lockedWindowId: currentWindowId });
+      renderUI({ locked: true, lockedTabId: currentTabId, lockedWindowId: currentWindowId, unlockAt });
     }
   } catch (err) {
     console.error("Tab Lock popup error:", err);
     statusText.textContent = "Error: " + err.message;
     statusText.className = "status-text";
   } finally {
-    setLoading(false);
+    // Only re-enable if we're not in a timer-locked state
+    if (!currentState?.unlockAt || Date.now() >= currentState.unlockAt) {
+      setLoading(false);
+    }
   }
 });
 
